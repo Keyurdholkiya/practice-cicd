@@ -1,7 +1,7 @@
 {
   "name": "node-hello-app",
   "version": "1.0.0",
-  "description": "Simple Node 20 Project",
+  "description": "Simple Node.js 20 Project",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

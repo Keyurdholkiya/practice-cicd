@@ -1,0 +1,34 @@
+name: practice for ci cd
+on:
+  push:
+   branches:
+     [main , feature , keyur] 
+  
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20, 18, 16]
+    runs-on: ${{ matrix.os }}
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: set up node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+      
+      - name: docker build 
+        echo "docker build -t node-hello-app ."
+        if: github.ref == 'refs/heads/main'
