@@ -27,8 +27,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Send Slack Alert on Failure
+        if: failure()
+        run: echo "Sending Slack alert for failed job"
+
       - name: Run tests
         run: npm test
+
+      - name: success message
+        if: success()
+        run: echo "All tests passed successfully!"
       
       - name: docker build 
         run: echo "docker build -t node-hello-app ."
