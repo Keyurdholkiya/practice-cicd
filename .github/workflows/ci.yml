@@ -14,8 +14,14 @@ jobs:
         node-version: [20, 18, 16]
       fail-fast: false
       exclude:
-        - os: windows-latest , macos-latest
-          node-version: 16 , 18
+          - os: windows-latest
+            node-version: 16
+          - os: windows-latest
+            node-version: 18
+          - os: macos-latest
+            node-version: 16
+          - os: macos-latest
+            node-version: 18
     runs-on: ${{ matrix.os }}
     steps:
 
