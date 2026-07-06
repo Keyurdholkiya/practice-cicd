@@ -1,52 +1,51 @@
-name: practice for ci cd
-on:
-  push:
-   branches:
-     [main , feature , keyur] 
-  
-  workflow_dispatch:
+name: Share data between jobs
+
+on: [push]
 
 jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [20, 18, 16]
-        exclude:
-            - os: windows-latest
-              node-version: 16
-            - os: windows-latest
-              node-version: 18
-            - os: macos-latest
-              node-version: 16
-            - os: macos-latest
-              node-version: 18
-    runs-on: ${{ matrix.os }}
+  job_1:
+    name: Add 3 and 7
+    runs-on: ubuntu-latest
     steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: set up node
-        uses: actions/setup-node@v3
+      - shell: bash
+        run: |
+          expr 3 + 7 > math-homework.txt
+      - name: Upload math result for job 1
+        uses: actions/upload-artifact@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          name: homework_pre
+          path: math-homework.txt
 
-      - name: Install dependencies
-        run: npm install
+  job_2:
+    name: Multiply by 9
+    needs: job_1
+    runs-on: windows-latest
+    steps:
+      - name: Download math result for job 1
+        uses: actions/download-artifact@v5
+        with:
+          name: homework_pre
+      - shell: bash
+        run: |
+          value=`cat math-homework.txt`
+          expr $value \* 9 > math-homework.txt
+      - name: Upload math result for job 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: homework_final
+          path: math-homework.txt
 
-      - name: Send Slack Alert on Failure
-        if: failure()
-        run: echo "Sending Slack alert for failed job"
-
-      - name: Run tests
-        run: npm test
-
-      - name: success message
-        if: success()
-        run: echo "All tests passed successfully!"
-      
-      - name: docker build 
-        run: echo "docker build -t node-hello-app ."
-        if: github.ref == 'refs/heads/main'
+  job_3:
+    name: Display results
+    needs: job_2
+    runs-on: macOS-latest
+    steps:
+      - name: Download math result for job 2
+        uses: actions/download-artifact@v5
+        with:
+          name: homework_final
+      - name: Print the final result
+        shell: bash
+        run: |
+          value=`cat math-homework.txt`
+          echo The result is $value
