@@ -1,51 +1,34 @@
-name: Share data between jobs
-
-on: [push]
-
+name: environment practice
+on: [ push ]
 jobs:
-  job_1:
-    name: Add 3 and 7
+  deploy-ment:
     runs-on: ubuntu-latest
+    environment:
+        name: production
+        url: https://example.com
     steps:
-      - shell: bash
-        run: |
-          expr 3 + 7 > math-homework.txt
-      - name: Upload math result for job 1
-        uses: actions/upload-artifact@v4
-        with:
-          name: homework_pre
-          path: math-homework.txt
+      - name: checkout
+        uses: actions/checkout@v4
 
-  job_2:
-    name: Multiply by 9
-    needs: job_1
-    runs-on: windows-latest
-    steps:
-      - name: Download math result for job 1
-        uses: actions/download-artifact@v5
-        with:
-          name: homework_pre
-      - shell: bash
-        run: |
-          value=`cat math-homework.txt`
-          expr $value \* 9 > math-homework.txt
-      - name: Upload math result for job 2
-        uses: actions/upload-artifact@v4
-        with:
-          name: homework_final
-          path: math-homework.txt
+      - name: run a one-line script
+        run: echo "Hello, world!"
 
-  job_3:
-    name: Display results
-    needs: job_2
-    runs-on: macOS-latest
-    steps:
-      - name: Download math result for job 2
-        uses: actions/download-artifact@v5
-        with:
-          name: homework_final
-      - name: Print the final result
-        shell: bash
+      - name: run a multi-line script
         run: |
-          value=`cat math-homework.txt`
-          echo The result is $value
+          echo "This is a multi-line script."
+          echo "It can run multiple commands."
+          echo "Each command is executed in order."
+
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: install dependencies
+        run: npm install
+
+      - name: run tests
+        run: npm test
+
+  
+    
