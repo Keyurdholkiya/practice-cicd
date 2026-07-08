@@ -4,7 +4,7 @@ jobs:
   deploy-ment:
     runs-on: ubuntu-latest
     environment:
-        name: production
+        name: practice
         url: https://example.com
     steps:
       - name: checkout
