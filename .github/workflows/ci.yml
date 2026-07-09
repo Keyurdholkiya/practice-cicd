@@ -7,11 +7,8 @@ jobs:
     matrix:
       os: [ubuntu-latest, windows-latest]
       node-version: [22, 20]
-   env:
-     NODE_ENV: ${{ matrix.node-version }}
-     VIRTUAL_ENV: ${{ matrix.os }}
- 
-   runs-on: ${{ env.VIRTUAL_ENV }}
+
+   runs-on: ${{ matrix.os }}
    environment: practice
 
    steps:
@@ -21,7 +18,7 @@ jobs:
     - name: setup node
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ env.NODE_ENV }}
+        node-version: ${{ matrix.node-version }}
 
     - name: Install dependencies
       run: npm install
