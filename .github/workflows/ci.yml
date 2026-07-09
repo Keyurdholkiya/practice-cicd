@@ -1,34 +1,57 @@
-name: environment practice
+name: real time company deployment
 on: [ push ]
 jobs:
-  deploy-ment:
-    runs-on: ubuntu-latest
-    environment:
-        name: practice
-        url: http://localhost:3000
-    steps:
-      - name: checkout
-        uses: actions/checkout@v5
+  test-staging:
+  name: Test and Deploy to Staging
+  runs-on: ${{ env.VIRTUAL_ENV }}
+  environment: practice
+  env:
+    NODE_ENV: ${{ matrix.node-version }}
+    VIRTUAL_ENV: ${{ matrix.os }}
+  strategy:
+    matrix:
+      os: [ubuntu-latest, windows-latest]
+      node-version: [22, 20]
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: run a one-line script
-        run: echo "Hello, world!"
+    - name: setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_ENV }}
 
-      - name: run a multi-line script
-        run: |
-          echo "This is a multi-line script."
-          echo "It can run multiple commands."
-          echo "Each command is executed in order."
+    - name: Install dependencies
+      run: npm install
 
-      - name: setup node
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
+    - name: lint code
+      run: npm run lint
 
-      - name: install dependencies
-        run: npm install
-
-      - name: run tests
-        run: npm test
-
+    - name: Run tests
+      run: npm test
   
-    
+  deployment:
+    name: Deploy to dokcerhub
+    runs-on: ubuntu-latest
+    needs: test-staging
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKER_USERNAME }}/production:latest
+            ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
+
