@@ -3,13 +3,14 @@ on: [ push ]
 jobs:
   test-staging:
    name: Test and Deploy to Staging
+   strategy:
+    matrix:
+      os: [ubuntu-latest, windows-latest]
+      node-version: [22, 20]
    env:
      NODE_ENV: ${{ matrix.node-version }}
      VIRTUAL_ENV: ${{ matrix.os }}
-   strategy:
-     matrix:
-       os: [ubuntu-latest, windows-latest]
-       node-version: [22, 20]
+ 
    runs-on: ${{ env.VIRTUAL_ENV }}
    environment: practice
 
