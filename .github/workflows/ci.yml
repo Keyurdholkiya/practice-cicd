@@ -7,10 +7,7 @@ jobs:
     matrix:
       os: [ubuntu-latest, windows-latest]
       node-version: [22, 20]
-
    runs-on: ${{ matrix.os }}
-   environment: practice
-
    steps:
     - name: Checkout code
       uses: actions/checkout@v3
