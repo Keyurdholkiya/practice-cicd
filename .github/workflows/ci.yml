@@ -2,17 +2,18 @@ name: real time company deployment
 on: [ push ]
 jobs:
   test-staging:
-  name: Test and Deploy to Staging
-  runs-on: ${{ env.VIRTUAL_ENV }}
-  environment: practice
-  env:
-    NODE_ENV: ${{ matrix.node-version }}
-    VIRTUAL_ENV: ${{ matrix.os }}
-  strategy:
-    matrix:
-      os: [ubuntu-latest, windows-latest]
-      node-version: [22, 20]
-  steps:
+   name: Test and Deploy to Staging
+   env:
+     NODE_ENV: ${{ matrix.node-version }}
+     VIRTUAL_ENV: ${{ matrix.os }}
+   strategy:
+     matrix:
+       os: [ubuntu-latest, windows-latest]
+       node-version: [22, 20]
+   runs-on: ${{ env.VIRTUAL_ENV }}
+   environment: practice
+
+   steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
