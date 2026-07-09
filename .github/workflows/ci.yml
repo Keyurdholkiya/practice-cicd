@@ -1,5 +1,5 @@
 name: real time company deployment
-on: [ push , workflow_dispatch ]
+on: [ workflow_dispatch ]
 
 jobs:
   test-staging:
@@ -7,10 +7,10 @@ jobs:
    runs-on: ubuntu-latest
    steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
 
     - name: setup node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '22'
 
@@ -27,10 +27,10 @@ jobs:
     environment: production
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Log in to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
