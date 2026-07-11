@@ -1,47 +1,27 @@
-name: real time company deployment
-on: [ workflow_dispatch ]
+name: jobs output
+on:
+  push:
+    branches:
+      [ main , keyur ]
 
 jobs:
-  test-staging:
-   name: Test and Deploy to Staging
-   runs-on: ubuntu-latest
-   steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-
-    - name: setup node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Run tests
-      run: npm test
-  
-  deployment:
-    name: Deploy to dokcerhub
+  generator:
+    name: generate output
     runs-on: ubuntu-latest
-    needs: test-staging
-    environment: production
+    outputs:
+      output_key: ${{ steps.generate_output.outputs.NAME }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Log in to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ vars.DOCKER_USERNAME }}/production:latest
-            ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
-
+      - name: Generate output
+        id: generate_output
+        run: |
+          echo "NAME=keyur" >> $GITHUB_OUTPUT
+  printer:
+    name: print output
+    runs-on: ubuntu-latest
+    needs: generator
+    steps:
+      - name: Print output
+        run: echo "Welcome  ${{ needs.generator.outputs.output_key }}"
