@@ -89,10 +89,10 @@ jobs:
                     sudo systemctl enable docker
                     sudo systemctl start docker
                  fi
-                 docker pull ${{ secrets.DOCKER_USERNAME }}/production:latest
-                 docker stop cloudchef || true
-                 docker rm cloudchef || true
-                 docker run -d \
+                 sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:latest
+                 sudo docker stop cloudchef || true
+                 sudo docker rm cloudchef || true
+                 sudo docker run -d \
                   --name cloudchef \
                   -p 3000:3000 \
                   ${{ secrets.DOCKER_USERNAME }}/production:latest
