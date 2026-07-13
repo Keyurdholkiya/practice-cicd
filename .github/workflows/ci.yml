@@ -80,25 +80,24 @@ jobs:
      runs-on: ubuntu-latest
      needs: push-app
      steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ vars.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}     
-          script: |
-            if ! command -v docker &> /dev/null
-            then
-                sudo apt update
-                sudo apt install -y docker.io
-                sudo systemctl enable docker
-                sudo systemctl start docker
-            fi
-            docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
-            
-            docker stop node-hello-app-node-hello-app-1 || true
-            docker rm node-hello-app-node-hello-app-1 || true
-            docker run -d \
-              --name node-hello-app-node-hello-app-1 \
-              -p 3000:3000 \
-              ${{ vars.DOCKER_USERNAME }}/production:latest
+       - name: Deploy to EC2
+         uses: appleboy/ssh-action@v1.0.3
+         with:
+           host: ${{ secrets.EC2_HOST }}
+           username: ${{ vars.EC2_USER }}
+           key: ${{ secrets.EC2_SSH_KEY }}
+           script: |
+             if ! command -v docker &> /dev/null
+             then
+                 sudo apt update
+                 sudo apt install -y docker.io
+                 sudo systemctl enable docker
+                 sudo systemctl start docker
+             fi
+             sudo docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
+             sudo docker stop node-hello-app-node-hello-app-1 || true
+             sudo docker rm node-hello-app-node-hello-app-1 || true
+             sudo docker run -d \
+               --name node-hello-app-node-hello-app-1 \
+               -p 3000:3000 \
+               ${{ vars.DOCKER_USERNAME }}/production:latest
