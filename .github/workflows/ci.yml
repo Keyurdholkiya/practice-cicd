@@ -44,12 +44,6 @@ jobs:
 
        - name: build app 
          run: npm run build
-  
-       - name: Archive production artifacts
-         uses: actions/upload-artifact@v4
-         with:
-          name: build
-          path: build
 
   push-app:
      name: push on docker
@@ -104,4 +98,3 @@ jobs:
                --name node-hello-app-node-hello-app-1 \
                -p 3000:3000 \
                ${{ vars.DOCKER_USERNAME }}/production:latest
-               
