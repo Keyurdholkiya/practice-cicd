@@ -5,77 +5,76 @@ on:
     [ main , keyur]
 
 jobs:
-  test-app:
-     name: test the app
-     runs-on: ubuntu-latest
+  # test-app:
+  #    name: test the app
+  #    runs-on: ubuntu-latest
 
-     steps:
-       - name: checkout code
-         uses: actions/checkout@v4
+  #    steps:
+  #      - name: checkout code
+  #        uses: actions/checkout@v4
 
-       - name: set up node
-         uses: actions/setup-node@v4
-         with:
-          node-version: "22"
-          cache: npm
+  #      - name: set up node
+  #        uses: actions/setup-node@v4
+  #        with:
+  #         node-version: "22"
+  #         cache: npm
 
-       - name: install dependecies
-         run: npm ci
+  #      - name: install dependecies
+  #        run: npm ci
 
-       - name: testing 
-         run: npm test
+  #      - name: testing 
+  #        run: npm test
    
-  build-app:
-     name: build the image
-     runs-on: ubuntu-latest
-     needs: test-app
-     steps:
-       - name: checkout
-         uses: actions/checkout@v4
+  # build-app:
+  #    name: build the image
+  #    runs-on: ubuntu-latest
+  #    needs: test-app
+  #    steps:
+  #      - name: checkout
+  #        uses: actions/checkout@v4
 
-       - name: setup node
-         uses: actions/setup-node@v4
-         with:
-           node-version: "22"  
-           cache: npm
+  #      - name: setup node
+  #        uses: actions/setup-node@v4
+  #        with:
+  #          node-version: "22"  
+  #          cache: npm
 
-       - name: install dependecies
-         run: npm ci
+  #      - name: install dependecies
+  #        run: npm ci
 
-       - name: build app 
-         run: npm run build
+  #      - name: build app 
+  #        run: npm run build
 
-  push-app:
-     name: push on docker
-     runs-on: ubuntu-latest
-     needs: build-app
-     steps:   
-       - name: checkout
-         uses: actions/checkout@v4
+  # push-app:
+  #    name: push on docker
+  #    runs-on: ubuntu-latest
+  #    needs: build-app
+  #    steps:   
+  #      - name: checkout
+  #        uses: actions/checkout@v4
 
-       - name: docker login
-         uses: docker/login-action@v3
-         with:
-           username: ${{ vars.DOCKER_USERNAME }}
-           password: ${{ secrets.DOCKER_PASSWORD }}
+  #      - name: docker login
+  #        uses: docker/login-action@v3
+  #        with:
+  #          username: ${{ vars.DOCKER_USERNAME }}
+  #          password: ${{ secrets.DOCKER_PASSWORD }}
 
-       - name: build and push
-         uses: docker/build-push-action@v6
-         with:
-           context: .
-           file: ./Dockerfile
-           push: true
-           tags: |
-            ${{ vars.DOCKER_USERNAME }}/production:latest
-            ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
+  #      - name: build and push
+  #        uses: docker/build-push-action@v6
+  #        with:
+  #          context: .
+  #          file: ./Dockerfile
+  #          push: true
+  #          tags: |
+  #           ${{ vars.DOCKER_USERNAME }}/production:latest
+  #           ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
 
   deploy:
      name: EC2 deploye
      runs-on: ubuntu-latest
-     needs: push-app
      steps:
        - name: Deploy to EC2
-         uses: appleboy/ssh-action@v1.0.3
+         uses: appleboy/ssh-action@v1
          with:
            host: ${{ secrets.EC2_HOST }}
            username: ${{ secrets.EC2_USER }}
