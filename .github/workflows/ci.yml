@@ -104,3 +104,4 @@ jobs:
                --name node-hello-app-node-hello-app-1 \
                -p 3000:3000 \
                ${{ vars.DOCKER_USERNAME }}/production:latest
+               
