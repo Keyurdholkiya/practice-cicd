@@ -98,10 +98,12 @@ jobs:
            docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
 
 
-           docker rm -f node-hello-app-node-hello-app-1 || true
+           docker rm node-hello-app-node-hello-app-1 || true
 
-           docker run -d --name node-hello-app-node-hello-app-1
-           -p 3000:3000 ${{ vars.DOCKER_USERNAME }}/production:latest
+           docker run -d \
+           --name node-hello-app-node-hello-app-1 \
+           -p 3000:3000 \
+           ${{ vars.DOCKER_USERNAME }}/production:latest
 
    
 
