@@ -97,7 +97,6 @@ jobs:
 
            docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
 
-
            docker rm node-hello-app-node-hello-app-1 || true
 
            docker run -d \
