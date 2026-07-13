@@ -2,7 +2,7 @@ name: deploy on Ec2 aws
 on:
  push:
   branches:
-    [ main , keyur]
+    - main
 
 jobs:
   # test-app:
@@ -89,10 +89,10 @@ jobs:
                     sudo systemctl enable docker
                     sudo systemctl start docker
                  fi
-                 docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
+                 docker pull ${{ secrets.DOCKER_USERNAME }}/production:latest
                  docker stop cloudchef || true
                  docker rm cloudchef || true
                  docker run -d \
                   --name cloudchef \
                   -p 3000:3000 \
-                  ${{ vars.DOCKER_USERNAME }}/production:latest
+                  ${{ secrets.DOCKER_USERNAME }}/production:latest
