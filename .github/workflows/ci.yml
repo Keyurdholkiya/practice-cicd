@@ -67,8 +67,8 @@ jobs:
        - name: build and push
          uses: docker/build-push-action@v6
          with:
-           context: .
-           file: ./Dockerfile
+           context: ./node-hello-app
+           file: ./node-hello-app/Dockerfile
            push: true
            tags: |
             ${{ vars.DOCKER_USERNAME }}/production:latest,
