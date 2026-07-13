@@ -1,21 +1,17 @@
-import express from "express";
-import process from "process";
-//hello
+const express = require('express');
+const path = require('path');
 const app = express();
+const PORT = 3000;
 
-const PORT = process.env.PORT || 3000;
+// public folder ke andar ki static files (CSS, JS) ko serve karne ke liye
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get("/", (req, res) => {
-    res.send("Hello from Node.js 20 🚀");
+// Main route jo HTML page load karega
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get("/health", (req, res) => {
-    res.json({
-        status: "OK",
-        node: process.version
-    });
-});
-
+// Server start karne ke liye
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}`);
 });
