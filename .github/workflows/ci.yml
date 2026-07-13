@@ -95,6 +95,7 @@ jobs:
                 sudo systemctl start docker
             fi
             docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
+            
             docker stop node-hello-app-node-hello-app-1 || true
             docker rm node-hello-app-node-hello-app-1 || true
             docker run -d \
