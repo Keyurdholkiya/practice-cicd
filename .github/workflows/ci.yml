@@ -2,7 +2,7 @@ name: deploy on Ec2 aws
 on:
  push:
   branches:
-    [ main , keyur ]
+    [ main , keyur]
 
 jobs:
   test-app:
@@ -55,26 +55,16 @@ jobs:
      name: push on docker
      runs-on: ubuntu-latest
      needs: build-app
-     steps:
-       # 1. Sabse pehle repository ka code is job ke runner par lekar aao (Isse Dockerfile mil jayegi)
-       - name: checkout code
+     steps:   
+       - name: checkout
          uses: actions/checkout@v4
 
-       # 2. Build job se compile hua folder 'build' directory me download karo
-       - name: Download build artifact
-         uses: actions/download-artifact@v4
-         with:
-          name: build
-          path: build
-
-       # 3. Docker login karein
        - name: docker login
          uses: docker/login-action@v3
          with:
            username: ${{ vars.DOCKER_USERNAME }}
            password: ${{ secrets.DOCKER_PASSWORD }}
 
-       # 4. Ab build aur push smoothly chal jayega
        - name: build and push
          uses: docker/build-push-action@v6
          with:
@@ -82,5 +72,10 @@ jobs:
            file: ./Dockerfile
            push: true
            tags: |
-             ${{ vars.DOCKER_USERNAME }}/production:latest
-             ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
+            ${{ vars.DOCKER_USERNAME }}/production:latest
+            ${{ vars.DOCKER_USERNAME }}/production:${{ github.sha }}
+
+
+      
+
+
