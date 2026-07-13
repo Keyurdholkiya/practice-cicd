@@ -73,25 +73,28 @@ jobs:
     name: EC2 deploye
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-            host: ${{ secrets.EC2_HOST }}
-            username: ${{ secrets.EC2_USER }}
-            key: ${{ secrets.EC2_SSH_KEY }}
-
-            script: |
-                if ! command -v docker &> /dev/null
-                then
-                    sudo apt update
-                    sudo apt install -y docker.io
-                    sudo systemctl enable docker
-                    sudo systemctl start docker
-                fi
-                docker pull ${{ vars.DOCKER_USERNAME }}/my-project:v1.0
-                docker stop cloudchef || true
-                docker rm cloudchef || true
-                docker run -d \
-                --name cloudchef \
-                -p 8000:8000 \
-                ${{ vars.DOCKER_USERNAME }}/my-project:latest
+      - name: Deploy using SSH script
+        run: |
+          # 1. Secret me se key ko ek temporary file me write karo
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
+          
+          # 2. Key file ko sahi permissions do (SSH bina iske connect nahi karega)
+          chmod 600 private_key.pem
+          
+          # 3. Direct ssh command chalayein bina kisi teesre plugin (appleboy) ke
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            if ! command -v docker &> /dev/null
+            then
+                sudo apt update
+                sudo apt install -y docker.io
+                sudo systemctl enable docker
+                sudo systemctl start docker
+            fi
+            sudo docker pull ${{ vars.DOCKER_USERNAME }}/production:latest
+            sudo docker stop node-hello-app-node-hello-app-1 || true
+            sudo docker rm node-hello-app-node-hello-app-1 || true
+            sudo docker run -d \
+              --name node-hello-app-node-hello-app-1 \
+              -p 3000:3000 \
+              ${{ vars.DOCKER_USERNAME }}/production:latest
+          EOF
