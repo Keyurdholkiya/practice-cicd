@@ -1,99 +1,135 @@
-name: deploy on Ec2 aws 
+name: automatic rollback
 on:
- push:
+ push: 
   branches:
-    - main
-
+   - main
 jobs:
-  test-app:
-     name: test the app
-     runs-on: ubuntu-latest
+   test-app:
+    name: test application
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
 
-     steps:
-       - name: checkout code
-         uses: actions/checkout@v4
-
-       - name: set up node
-         uses: actions/setup-node@v4
-         with:
-          node-version: "22"
+      - name: setup node with version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
           cache: npm
 
-       - name: install dependecies
-         run: npm ci
+      - name: install dependices
+        run: npm ci
 
-       - name: testing 
-         run: npm test
-   
-  build-app:
-     name: build the image
-     runs-on: ubuntu-latest
-     needs: test-app
-     steps:
-       - name: checkout
-         uses: actions/checkout@v4
+      - name: test unit run
+        run: npm test
 
-       - name: setup node
-         uses: actions/setup-node@v4
-         with:
-           node-version: "22"  
-           cache: npm
-
-       - name: install dependecies
-         run: npm ci
-
-       - name: build app 
-         run: npm run build
-
-  push-app:
-     name: push on docker
-     runs-on: ubuntu-latest
-     needs: build-app
-     steps:   
-       - name: checkout
-         uses: actions/checkout@v4
-
-       - name: docker login
-         uses: docker/login-action@v3
-         with:
-           username: ${{ secrets.DOCKER_USERNAME }}
-           password: ${{ secrets.DOCKER_PASSWORD }}
-
-       - name: build and push
-         uses: docker/build-push-action@v6
-         with:
-           context: .
-           file: ./Dockerfile
-           push: true
-           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/production:latest
-            ${{ secrets.DOCKER_USERNAME }}/production:${{ github.sha }}
-
-  deploy:
-    name: EC2 deploye
-    runs-on: ubuntu-latest
-    needs: push-app
+   docker-login:
+    name: docker login 
+    runs-on: ubuntu-22.04
+    needs: test-app
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: docker login
+        uses: docker/login-action@v3
         with:
-            host: ${{ secrets.EC2_HOST }}
-            username: ${{ secrets.EC2_USER }}
-            key: ${{ secrets.EC2_SSH_KEY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-            script: |
+      - name: build and push on docker hub
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+             ${{ secrets.DOCKER_USERNAME }}/production:latest
+             ${{ secrets.DOCKER_USERNAME }}/production:${{ github.sha }}
 
-                 if ! command -v docker &> /dev/null
-                 then
+   deploy-app:
+    name: deploy app with automatic rollback on EC2
+    runs-on: ubuntu-latest
+    needs: docker-login
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get Previous and Current Commit IDs
+        id: commits
+        run: |
+          echo "PREVIOUS_COMMIT=$(git rev-parse HEAD~1)" >> $GITHUB_ENV
+          echo "CURRENT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: login on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          CURRENT_COMMIT: ${{ env.CURRENT_COMMIT }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            if ! command -v docker &> /dev/null
+                then
                     sudo apt update
                     sudo apt install -y docker.io
                     sudo systemctl enable docker
                     sudo systemctl start docker
-                 fi
-                 sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:latest
-                 sudo docker stop cloudchef || true
-                 sudo docker rm cloudchef || true
-                 sudo docker run -d \
-                  --name cloudchef \
-                  -p 3000:3000 \
-                  ${{ secrets.DOCKER_USERNAME }}/production:latest
+            fi
+
+            sudo docker stop hello || true
+
+            sudo docker rm hello || true 
+
+            sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
+
+            sudo docker run -d --name hello -p 3000:3000  ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
+
+      - name: Wait for Server to Start
+        run: sleep 5
+
+      - name: Hit Health Check Endpoint
+        id: health_check
+        run: |
+          echo "Checking server health..."
+          # Aapke server.js ka /health route hit karenge
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://13.127.162.7:3000/health)
+          
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Health check failed with status $STATUS_CODE! Triggering Rollback..."
+            exit 1 # Janbujhkar step ko fail kiya taaki agla rollback step chal sake
+          else
+            echo "Server is healthy! Deployment successful."
+          fi
+        continue-on-error: false
+
+      - name: Trigger Automatic Rollback
+        if: failure() && steps.health_check.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PREVIOUS_COMMIT: ${{ env.PREVIOUS_COMMIT }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            if ! command -v docker &> /dev/null
+                then
+                    sudo apt update
+                    sudo apt install -y docker.io
+                    sudo systemctl enable docker
+                    sudo systemctl start docker
+            fi
+
+            sudo docker stop hello || true
+
+            sudo docker rm hello || true 
+
+            sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
+
+            sudo docker run -d --name hello -p 3000:3000  ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT

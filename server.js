@@ -11,6 +11,16 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// 🚀 HEALTH CHECK ENDPOINT (Auto-Rollback aur CI/CD ke liye)
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: "OK",
+        uptime: process.uptime(),         // Server kitne seconds se chal raha hai
+        timestamp: new Date().toISOString(), // Current time kya hai
+        nodeVersion: process.version      // Node ka kaun sa version use ho raha hai
+    });
+});
+
 // Server start karne ke liye
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
