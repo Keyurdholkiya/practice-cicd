@@ -13,11 +13,9 @@ app.get('/', (req, res) => {
 
 // 🚀 HEALTH CHECK ENDPOINT (Auto-Rollback aur CI/CD ke liye)
 app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: "OK",
-        uptime: process.uptime(),         // Server kitne seconds se chal raha hai
-        timestamp: new Date().toISOString(), // Current time kya hai
-        nodeVersion: process.version      // Node ka kaun sa version use ho raha hai
+    res.status(500).json({
+        status: "ERROR",
+        message: "Manually triggered failure for rollback test"
     });
 });
 
