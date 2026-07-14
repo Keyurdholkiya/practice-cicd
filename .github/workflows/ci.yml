@@ -67,6 +67,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           CURRENT_COMMIT: ${{ env.CURRENT_COMMIT }}
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -81,16 +82,16 @@ jobs:
                     sudo systemctl start docker
             fi
 
-            sudo docker stop hello || true
+            sudo docker stop hello >/dev/null 2>&1 || true
+            sudo docker rm hello >/dev/null 2>&1 || true
 
-            sudo docker rm hello || true 
-
-            sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
-
-            docker run -d \
-                --name cloudchef \
-                -p 3000:3000 \
-                ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
+            IMAGE_NAME="${DOCKER_USER}/production:${CURRENT_COMMIT}"
+            
+            echo "Pulling image: $IMAGE_NAME"
+            sudo docker pull $IMAGE_NAME
+            
+            echo "Running container..."
+            sudo docker run -d --name hello -p 3000:3000 $IMAGE_NAME
 
       - name: Wait for Server to Start
         run: sleep 5
@@ -115,27 +116,18 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           PREVIOUS_COMMIT: ${{ env.PREVIOUS_COMMIT }}
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            if ! command -v docker &> /dev/null
-                then
-                    sudo apt update
-                    sudo apt install -y docker.io
-                    sudo systemctl enable docker
-                    sudo systemctl start docker
-            fi
 
-            sudo docker stop hello || true
+            sudo docker stop hello >/dev/null 2>&1 || true
+            sudo docker rm hello >/dev/null 2>&1 || true 
 
-            sudo docker rm hello || true 
-
-            sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
-
-            docker run -d \
-             --name hello \
-             -p 3000:3000 \
-             ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
+            IMAGE_NAME="${DOCKER_USER}/production:${PREVIOUS_COMMIT}"
+            
+            sudo docker pull $IMAGE_NAME
+            sudo docker run -d --name hello -p 3000:3000 $IMAGE_NAME
