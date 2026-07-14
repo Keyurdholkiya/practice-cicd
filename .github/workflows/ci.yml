@@ -87,10 +87,10 @@ jobs:
 
             sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
 
-            sudo docker run -d \
-             --name hello \
-             -p 3000:3000 \
-             ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
+            docker run -d \
+                --name cloudchef \
+                -p 3000:3000 \
+                ${{ secrets.DOCKER_USERNAME}}/production:$CURRENT_COMMIT
 
       - name: Wait for Server to Start
         run: sleep 5
@@ -135,7 +135,7 @@ jobs:
 
             sudo docker pull ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
 
-            sudo docker run -d \
-            --name hello \
-            -p 3000:3000 \
-            ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
+            docker run -d \
+             --name hello \
+             -p 3000:3000 \
+             ${{ secrets.DOCKER_USERNAME}}/production:$PREVIOUS_COMMIT
