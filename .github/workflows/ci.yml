@@ -133,3 +133,4 @@ jobs:
             
             sudo docker pull $IMAGE_NAME
             sudo docker run -d --name hello -p 3000:3000 $IMAGE_NAME
+            
