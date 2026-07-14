@@ -73,6 +73,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          envs: CURRENT_COMMIT,DOCKER_USER
           script: |
             if ! command -v docker &> /dev/null
                 then
@@ -122,6 +123,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          envs: PREVIOUS_COMMIT,DOCKER_USER
           script: |
 
             sudo docker stop hello >/dev/null 2>&1 || true
