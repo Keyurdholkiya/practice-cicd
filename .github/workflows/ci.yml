@@ -62,6 +62,13 @@ jobs:
           envs: COMMIT_VERSION
           port: 22
           script: |
+           if ! command -v docker &> /dev/null
+            then
+              sudo apt update
+              sudo apt install -y docker.io
+              sudo systemctl enable docker
+              sudo systemctl start docker
+           fi
            NGINX_CONF="/etc/nginx/sites-available/default"
 
            # 1. Determine active port using Nginx configuration
