@@ -1,136 +1,99 @@
-name: automatic rollback
+name: automatic rollback new version without remove and delay old version
 on:
  push: 
-  branches:
-   - main
+  tags: 
+   - "v*"
 jobs:
    test-app:
-    name: test application
+    name: this job test allpication
     runs-on: ubuntu-latest
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
+       - name: checkout
+         uses: actions/checkout@v4
 
-      - name: setup node with version
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+       - name: setup node
+         uses: actions/setup-node@v4
+         with:
+           node-version: 22
+           cache: npm
 
-      - name: install dependices
-        run: npm ci
-
-      - name: test unit run
-        run: npm test
+       - name: test run
+         run: npm test
 
    docker-login:
-    name: docker login 
-    runs-on: ubuntu-22.04
+    name: docker login jobs
     needs: test-app
+    runs-on: ubuntu-latest
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-
       - name: docker login
-        uses: docker/login-action@v3
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: build and push on docker hub
+      - name: docker build and  push
         uses: docker/build-push-action@v3
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: |
-             ${{ secrets.DOCKER_USERNAME }}/production:latest
-             ${{ secrets.DOCKER_USERNAME }}/production:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/production:v1
+            ${{ secrets.DOCKER_USERNAME }}/production:${{ github.sha }}
 
-   deploy-app:
-    name: deploy app with automatic rollback on EC2
+   deploy-job:
+    name: deploy on EC2 instance on aws
     runs-on: ubuntu-latest
     needs: docker-login
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Get Previous and Current Commit IDs
-        id: commits
-        run: |
-          echo "PREVIOUS_COMMIT=$(git rev-parse HEAD~1)" >> $GITHUB_ENV
-          echo "CURRENT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
-
-      - name: login on EC2
+      - name: ec2 login
         uses: appleboy/ssh-action@v1.0.3
         env:
-          CURRENT_COMMIT: ${{ env.CURRENT_COMMIT }}
-          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          COMMIT-VERSION: ${{ github.ref_name }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: COMMIT-VERSION
           port: 22
-          envs: CURRENT_COMMIT,DOCKER_USER
           script: |
-            if ! command -v docker &> /dev/null
-                then
-                    sudo apt update
-                    sudo apt install -y docker.io
-                    sudo systemctl enable docker
-                    sudo systemctl start docker
-            fi
+           NGINX_CONF="/etc/nginx/sites-available/default
 
-            sudo docker stop hello >/dev/null 2>&1 || true
-            sudo docker rm hello >/dev/null 2>&1 || true
+           if sudo grep -q "13.200.251.48:3001" "$NGINX_CONF" 
+           then
+            CURRENT_PORT="3001"
+            NEXT_PORT="3000"
+            NEXT_NAME="blue"
+            OLD_NAME="green"
+           else
+            CURRENT_PORT="3000"
+            NEXT_PORT="3001"
+            NEXT_NAME="green"
+            OLD_NAME="blue"
 
-            IMAGE_NAME="${DOCKER_USER}/production:${CURRENT_COMMIT}"
+           sudo docker stop $NEXT_PORT >/dev/null 2>&1 || true
+           sudo docker rm $NEXT_PORT >/dev/null 2>&1 || true
+
+           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT-VERSION
+
+           sudo docker run -d --name $NEXT_NAME -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT-VERSION
+
+           sleep 5
+
+           $STATUS_CODE = $(curl -s -o >/dev/null -w "%{http_code}" http://13.200.251.48:$NEXT_PORT/health)
+
+           if [ "$STATUS_CODE" -ne 200 ]
+           then 
+             sudo docker stop $NEXT_NAME >/dev/null 2>&1 || true
+             sudo docker rm $NEXT_NAME >/dev/null 2>&1 || true
+             exit 1
+           fi
             
-            echo "Pulling image: $IMAGE_NAME"
-            sudo docker pull $IMAGE_NAME
-            
-            echo "Running container..."
-            sudo docker run -d --name hello -p 3000:3000 $IMAGE_NAME
+           sudo sed -i "s/13.200.251.48:$CURRENT_PORT/13.200.251.48:$NEXT_PORT/g" $NGINX_CONF
+           sudo systemctl reload nginx
 
-      - name: Wait for Server to Start
-        run: sleep 5
+           sudo docker stop $OLD_NAME >/dev/null 2>&1 || true
+           sudo docker rm $OLD_NAME >/dev/null 2>&1 || true
 
-      - name: Hit Health Check Endpoint
-        id: health_check
-        run: |
-          echo "Checking server health..."
-          # Aapke server.js ka /health route hit karenge
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://13.127.162.7:3000/health)
-          
-          if [ "$STATUS_CODE" -ne 200 ]; then
-            echo "Health check failed with status $STATUS_CODE! Triggering Rollback..."
-            exit 1 # Janbujhkar step ko fail kiya taaki agla rollback step chal sake
-          else
-            echo "Server is healthy! Deployment successful."
-          fi
-        continue-on-error: false
+           echo "this is without stop old container run new container"
 
-      - name: Trigger Automatic Rollback
-        if: failure() && steps.health_check.outcome == 'failure'
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          PREVIOUS_COMMIT: ${{ env.PREVIOUS_COMMIT }}
-          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          envs: PREVIOUS_COMMIT,DOCKER_USER
-          script: |
-
-            sudo docker stop hello >/dev/null 2>&1 || true
-            sudo docker rm hello >/dev/null 2>&1 || true 
-
-            IMAGE_NAME="${DOCKER_USER}/production:${PREVIOUS_COMMIT}"
-            
-            sudo docker pull $IMAGE_NAME
-            sudo docker run -d --name hello -p 3000:3000 $IMAGE_NAME
-            
