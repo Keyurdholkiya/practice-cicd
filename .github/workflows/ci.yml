@@ -6,7 +6,7 @@ on:
   tags: 
    - "v*"
 env:
-  COMMIT-VERSION: ${{ github.ref_name }}
+  COMMIT_VERSION: ${{ github.ref_name }}
 jobs:
    test-app:
     name: this job test allpication
@@ -45,7 +45,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/production:${{ env.COMMIT-VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/production:${{ env.COMMIT_VERSION }}
 
 
    deploy-job:
@@ -59,7 +59,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: COMMIT-VERSION
+          envs: COMMIT_VERSION
           port: 22
           script: |
            NGINX_CONF="/etc/nginx/sites-available/default
@@ -79,9 +79,9 @@ jobs:
            sudo docker stop $NEXT_PORT >/dev/null 2>&1 || true
            sudo docker rm $NEXT_PORT >/dev/null 2>&1 || true
 
-           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT-VERSION
+           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
 
-           sudo docker run -d --name $NEXT_NAME -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT-VERSION
+           sudo docker run -d --name $NEXT_NAME -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
 
            sleep 5
 
