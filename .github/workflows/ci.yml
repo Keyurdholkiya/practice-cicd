@@ -104,11 +104,12 @@ jobs:
              exit 1
            fi
             
-           # 5. Live Router Traffic Flip
+  
            sudo sed -i "s/13.200.251.48:$CURRENT_PORT/13.200.251.48:$NEXT_PORT/g" "$NGINX_CONF"
            sudo systemctl reload nginx
 
-           # 6. Safe teardown of legacy container
+           sleep 3
+    
            sudo docker stop "$OLD_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
 
