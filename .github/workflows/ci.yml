@@ -72,78 +72,133 @@ jobs:
            NGINX_CONF="/etc/nginx/sites-available/default"
 
            # 1. Determine active port using Nginx configuration
-           if sudo grep -q "15.207.72.23:3001" "$NGINX_CONF"; then
-             CURRENT_PORT="3001"
-             NEXT_PORT="3000"
+           if sudo grep -q "127.0.0.1:3001 down" "$NGINX_CONF"; then
+             CURRENT_PORT="3000"
+             NEXT_PORT="3001"
              NEXT_NAME="carry"
              OLD_NAME="orignal"
            else
-             CURRENT_PORT="3000"
-             NEXT_PORT="3001"
+             CURRENT_PORT="3001"
+             NEXT_PORT="3000"
              NEXT_NAME="orignal"
              OLD_NAME="carry"
            fi
 
-           # 2. Cleanup the targeted container environment using its name (Not port!)
+           echo "Active: $OLD_NAME ($CURRENT_PORT) | Next: $NEXT_NAME ($NEXT_PORT)"
+
+           # 2. Cleanup the targeted container environment safely
            sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
 
            # 3. Pull and launch the dynamic tag build
            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
+
            sudo docker run -d --name "$NEXT_NAME" -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
 
            sleep 8
 
-           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
+           # Internal loopback check (Secured and faster)
+           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$NEXT_PORT/health)
            echo "Target app status code: $STATUS_CODE"
 
+           # 4. Phase 1 Check & Routing
            if [ "$STATUS_CODE" -ne 200 ]; then 
-             echo "❌ Health check failed! Rolling back to active deployment..."
+             echo "❌ Initial health check failed! Rolling back..."
              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
              exit 1
-           elif [ "$NEXT_NAME" = "orignal" ]; then
-             sudo sed -i 's/weight=[0-9]*/weight=10/2; s/weight=[0-9]*/weight=0/2' "$NGINX_CONF" 2>/dev/null || true
+           fi
+
+           if [ "$NEXT_NAME" = "orignal" ]; then
+             # Switch 100% to Original (port 3000 weight=10, port 3001 marked down)
+
+             sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+             sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
            else
-             sudo sed -i 's/weight=10/weight=9/g' "$NGINX_CONF"
-             sudo sed -i 's/weight=0/weight=1/g' "$NGINX_CONF"
+             # Shift 10% traffic to Carry (port 3000 weight=9, port 3001 weight=1)
+
+             sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=9 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+             sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=1 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
            fi
            sudo systemctl reload nginx
 
            sleep 7
 
+           # 5. Phase 2 Canary (Check if carry is stable under 10% traffic)
            if [ "$NEXT_NAME" = "carry" ]; then
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
-            echo "Target app status code: $STATUS_CODE"
-            if [ "$STATUS_CODE" -ne 200 ]; then 
-              echo "❌ Health check failed! Rolling back to active deployment..."
-              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
-              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
-              exit 1
-            else
-              sudo sed -i 's/weight=9/weight=5/g' "$NGINX_CONF"
-              sudo sed -i 's/weight=1/weight=5/g' "$NGINX_CONF"
-              sudo systemctl reload nginx
-              sleep 7
-            fi
-         
-             
+             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$NEXT_PORT/health)
+             echo "Canary Phase 2 status code: $STATUS_CODE"
+             if [ "$STATUS_CODE" -ne 200 ]; then 
+               echo "❌ Canary failed at 10%! Reverting to Original..."
+
+               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
+
+               sudo systemctl reload nginx
+
+               sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
+
+               sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
+               exit 1
+
+             else
+               # Shift traffic to 50/50 (port 3000 weight=5, port 3001 weight=5)
+
+               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=5 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=5 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+               sudo systemctl reload nginx
+
+               sleep 7
+
+             fi
+           fi
+
+           # 6. Phase 3 Canary (Check if carry is stable under 50% traffic)
            if [ "$NEXT_NAME" = "carry" ]; then
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
-            echo "Target app status code: $STATUS_CODE"
-            if [ "$STATUS_CODE" -ne 200 ]; then 
-              echo "❌ Health check failed! Rolling back to active deployment..."
-              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
-              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
-              exit 1
-            else
-              sudo sed -i 's/weight=5/weight=0/g' "$NGINX_CONF"
-              sudo sed -i 's/weight=5/weight=10/g' "$NGINX_CONF"
-              sudo systemctl reload nginx
-              sleep 7 
-            fi  
+
+             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$NEXT_PORT/health)
+
+             echo "Canary Phase 3 status code: $STATUS_CODE"
+
+             if [ "$STATUS_CODE" -ne 200 ]; then 
+               echo "❌ Canary failed at 50%! Reverting to Original..."
+
+               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
+
+               sudo systemctl reload nginx
+
+               sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
+
+               sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
+
+               exit 1
+
+             else
+               # Final promotion (port 3000 marked down, port 3001 weight=10)
+
+               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 down;/g' "$NGINX_CONF"
+
+               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
+               sudo systemctl reload nginx
+
+               sleep 7 
+
+             fi
+           fi
     
+           # 7. Safe teardown of legacy container after validation
+
            sudo docker stop "$OLD_NAME" >/dev/null 2>&1 || true
+           
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
 
-           echo "🎉 Zero downtime blue-green deployment successful without stopping old container first!"
+           echo "🎉 Zero downtime Canary deployment completed with automatic progressive rollbacks!"
