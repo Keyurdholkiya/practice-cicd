@@ -92,7 +92,7 @@ jobs:
            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
            sudo docker run -d --name "$NEXT_NAME" -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
 
-           sleep 15
+           sleep 8
 
            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://13.200.251.48:$NEXT_PORT/health)
            echo "Target app status code: $STATUS_CODE"
@@ -103,14 +103,12 @@ jobs:
              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
              exit 1
            fi
-            
-  
-           sudo sed -i "s/13.200.251.48:$CURRENT_PORT/13.200.251.48:$NEXT_PORT/g" "$NGINX_CONF"
+
            sudo systemctl reload nginx
 
-           sleep 10
+           sleep 20
     
-           sudo docker stop -t 15 "$OLD_NAME" >/dev/null 2>&1 || true
+           sudo docker stop -t 19 "$OLD_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
 
            echo "🎉 Zero downtime blue-green deployment successful without stopping old container first!"
