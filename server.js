@@ -11,12 +11,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 🚀 HEALTH CHECK ENDPOINT (Auto-Rollback aur CI/CD ke liye)
+// 🚀 HEALTH CHECK ENDPOINT
 app.get('/health', (req, res) => {
    res.status(200).send('OK');
 });
 
-// Server start karne ke liye
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+// Server start karne ke liye (Added '0.0.0.0' for Docker compatibility)
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT} across all interfaces`);
 });
