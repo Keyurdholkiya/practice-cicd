@@ -45,7 +45,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT-VERSION
+            ${{ secrets.DOCKER_USERNAME }}/production:${{ env.COMMIT-VERSION }}
 
 
    deploy-job:
