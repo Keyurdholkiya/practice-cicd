@@ -72,16 +72,16 @@ jobs:
            NGINX_CONF="/etc/nginx/sites-available/default"
 
            # 1. Determine active port using Nginx configuration
-           if sudo grep -q "13.200.251.48:3001" "$NGINX_CONF"; then
+           if sudo grep -q "15.207.72.23:3001" "$NGINX_CONF"; then
              CURRENT_PORT="3001"
              NEXT_PORT="3000"
-             NEXT_NAME="blue"
-             OLD_NAME="green"
+             NEXT_NAME="carry"
+             OLD_NAME="orignal"
            else
              CURRENT_PORT="3000"
              NEXT_PORT="3001"
-             NEXT_NAME="green"
-             OLD_NAME="blue"
+             NEXT_NAME="orignal"
+             OLD_NAME="carry"
            fi
 
            # 2. Cleanup the targeted container environment using its name (Not port!)
@@ -94,7 +94,7 @@ jobs:
 
            sleep 8
 
-           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://13.200.251.48:$NEXT_PORT/health)
+           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
            echo "Target app status code: $STATUS_CODE"
 
            if [ "$STATUS_CODE" -ne 200 ]; then 
@@ -102,13 +102,47 @@ jobs:
              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
              exit 1
-           fi
+           elfi [ "$NEXT_NAME" = "orignal" ]; then
+             sudo sed -i 's/weight=[0-9]*/weight=10/2; s/weight=[0-9]*/weight=0/2' "$NGINX_CONF" 2>/dev/null || true
+           else
+             sudo sed -i 's/weight=10/weight=9/g' "$NGINX_CONF"
+             sudo sed -i 's/weight=0/weight=1/g' "$NGINX_CONF"
 
            sudo systemctl reload nginx
 
-           sleep 20
+           sleep 7
+
+           if [ "$NEXT_NAME" = "carry" ]; then
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
+            echo "Target app status code: $STATUS_CODE"
+            if [ "$STATUS_CODE" -ne 200 ]; then 
+              echo "❌ Health check failed! Rolling back to active deployment..."
+              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
+              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
+              exit 1
+            else
+              sudo sed -i 's/weight=9/weight=5/g' "$NGINX_CONF"
+              sudo sed -i 's/weight=1/weight=5/g' "$NGINX_CONF"
+              sudo systemctl reload nginx
+              sleep 7
+
+         
+             
+           if [ "$NEXT_NAME" = "carry" ]; then
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://15.207.72.23:$NEXT_PORT/health)
+            echo "Target app status code: $STATUS_CODE"
+            if [ "$STATUS_CODE" -ne 200 ]; then 
+              echo "❌ Health check failed! Rolling back to active deployment..."
+              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
+              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
+              exit 1
+            else
+              sudo sed -i 's/weight=5/weight=0/g' "$NGINX_CONF"
+              sudo sed -i 's/weight=5/weight=10/g' "$NGINX_CONF"
+              sudo systemctl reload nginx
+              sleep 7 
     
-           sudo docker stop -t 19 "$OLD_NAME" >/dev/null 2>&1 || true
+           sudo docker stop "$OLD_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
 
            echo "🎉 Zero downtime blue-green deployment successful without stopping old container first!"
