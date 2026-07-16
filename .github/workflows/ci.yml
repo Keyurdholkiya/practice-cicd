@@ -93,7 +93,7 @@ jobs:
            sudo docker run -d --name "$NEXT_NAME" -p $NEXT_PORT:3000 ${{ secrets.DOCKER_USERNAME }}/production:$COMMIT_VERSION
 
            # 4. Verification Check
-           sleep 9
+           sleep 6
            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://13.200.251.48:$NEXT_PORT/health)
            echo "Target app status code: $STATUS_CODE"
 
@@ -108,7 +108,7 @@ jobs:
            sudo sed -i "s/13.200.251.48:$CURRENT_PORT/13.200.251.48:$NEXT_PORT/g" "$NGINX_CONF"
            sudo systemctl reload nginx
 
-           sleep 3
+           sleep 10
     
            sudo docker stop "$OLD_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
