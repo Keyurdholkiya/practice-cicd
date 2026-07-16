@@ -1,6 +1,8 @@
 name: automatic rollback new version without remove and delay old version
 on:
  push: 
+  branches: 
+   - main 
   tags: 
    - "v*"
 jobs:
@@ -96,5 +98,5 @@ jobs:
            sudo docker rm $OLD_NAME >/dev/null 2>&1 || true
 
            echo "this is without stop old container run new container"
-           
+
 
