@@ -1,6 +1,6 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #fffee9;
+    background-color: #fff86c;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -10,15 +10,15 @@ body {
 
 .container {
     text-align: center;
-    background: rgb(255, 187, 187);
+    background: rgb(255, 71, 71);
     padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(199, 222, 255, 0.728);
+    box-shadow: 0 4px 8px rgba(53, 137, 255, 0.728);
 }
 
 button {
-    background-color: #d4ffee;
-    color: rgb(224, 221, 255);
+    background-color: #58ffbc;
+    color: rgb(93, 79, 255);
     border: none;
     padding: 10px 20px;
     font-size: 16px;
@@ -28,7 +28,7 @@ button {
 }
 
 button:hover {
-    background-color: #fcdfff;
+    background-color: #ef5dff;
 }
 
 .hidden {
@@ -37,6 +37,6 @@ button:hover {
 
 #message {
     margin-top: 15px;
-    color: #fdffdc;
+    color: #f7ff60;
     font-weight: bold;
 }
