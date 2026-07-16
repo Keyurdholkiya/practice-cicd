@@ -102,12 +102,12 @@ jobs:
              sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
              sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
              exit 1
-           elfi [ "$NEXT_NAME" = "orignal" ]; then
+           elif [ "$NEXT_NAME" = "orignal" ]; then
              sudo sed -i 's/weight=[0-9]*/weight=10/2; s/weight=[0-9]*/weight=0/2' "$NGINX_CONF" 2>/dev/null || true
            else
              sudo sed -i 's/weight=10/weight=9/g' "$NGINX_CONF"
              sudo sed -i 's/weight=0/weight=1/g' "$NGINX_CONF"
-
+           fi
            sudo systemctl reload nginx
 
            sleep 7
@@ -125,7 +125,7 @@ jobs:
               sudo sed -i 's/weight=1/weight=5/g' "$NGINX_CONF"
               sudo systemctl reload nginx
               sleep 7
-
+            fi
          
              
            if [ "$NEXT_NAME" = "carry" ]; then
@@ -141,6 +141,7 @@ jobs:
               sudo sed -i 's/weight=5/weight=10/g' "$NGINX_CONF"
               sudo systemctl reload nginx
               sleep 7 
+            fi  
     
            sudo docker stop "$OLD_NAME" >/dev/null 2>&1 || true
            sudo docker rm "$OLD_NAME" >/dev/null 2>&1 || true
