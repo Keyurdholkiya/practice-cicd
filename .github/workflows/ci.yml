@@ -5,8 +5,7 @@ on:
    - main 
   tags: 
    - "v*"
-env:
-  COMMIT_VERSION: ${{ github.ref_name }}
+
 jobs:
    test-app:
     name: this job test allpication
@@ -45,13 +44,15 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/production:${{ env.COMMIT_VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/production:${{ github.ref_name }}
 
 
    deploy-job:
     name: deploy on EC2 instance on aws
     runs-on: ubuntu-latest
     needs: docker-login
+    env:
+     COMMIT_VERSION: ${{ github.ref_name }}
     steps:
       - name: ec2 login
         uses: appleboy/ssh-action@v1.0.3
