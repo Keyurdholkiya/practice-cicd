@@ -1,8 +1,6 @@
 name: automatic rollback new version without remove and delay old version
 on:
  push: 
-  branches: 
-   - main 
   tags: 
    - "v*"
 
