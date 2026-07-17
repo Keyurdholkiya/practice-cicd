@@ -48,7 +48,7 @@ jobs:
             sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
 
             # 👈 FIX 3b: Swapped $DOCKER_USERNAME to the local env var $DOCKER_USERNAME
-             
+
             sudo docker pull $DOCKER_USERNAME/production:$COMMIT_VERSION
 
             sudo docker run -d --name "$NEXT_NAME" -p $NEXT_PORT:3000 $DOCKER_USERNAME/production:$COMMIT_VERSION
@@ -56,6 +56,7 @@ jobs:
             sleep 8
 
             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$NEXT_PORT/health)
+
             if [ "$STATUS_CODE" -ne 200 ]; then 
               sudo docker stop "$NEXT_NAME" >/dev/null 2>&1 || true
               sudo docker rm "$NEXT_NAME" >/dev/null 2>&1 || true
@@ -63,12 +64,19 @@ jobs:
             fi
 
             if [ "$NEXT_NAME" = "orignal" ]; then
+
               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=1 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=9 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
             else
+
               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=9 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=1 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
             fi
+
             sudo systemctl reload nginx
             sleep 7
 
@@ -78,7 +86,9 @@ jobs:
                 sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 down;/g' "$NGINX_CONF"
                 sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
               else
+
                 sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
                 sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
               fi
               sudo systemctl reload nginx
@@ -88,17 +98,27 @@ jobs:
             fi
 
             sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=5 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
             sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=5 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
             sudo systemctl reload nginx
+
             sleep 7
 
+
             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$NEXT_PORT/health)
+
             if [ "$STATUS_CODE" -ne 200 ]; then 
               if [ "$NEXT_NAME" = "orignal" ]; then
+
                 sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 down;/g' "$NGINX_CONF"
+
                 sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
               else
+
                 sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
                 sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
               fi
               sudo systemctl reload nginx
@@ -108,10 +128,14 @@ jobs:
             fi
 
             if [ "$NEXT_NAME" = "orignal" ]; then
+
               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
+
               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 down;/g' "$NGINX_CONF"
             else
+            
               sudo sed -i 's/server 127.0.0.1:3000.*/server 127.0.0.1:3000 down;/g' "$NGINX_CONF"
+
               sudo sed -i 's/server 127.0.0.1:3001.*/server 127.0.0.1:3001 weight=10 max_fails=3 fail_timeout=5s;/g' "$NGINX_CONF"
             fi
             sudo systemctl reload nginx
